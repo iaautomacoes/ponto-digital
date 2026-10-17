@@ -195,34 +195,35 @@ with st.expander("📊 Painel Administrativo Restrito (Apenas ADM)"):
                     else:
                         df_m["Nome do Funcionário"] = df_m["Nome do Funcionário"].astype(str).str.strip()
                         
-if novo_nome.strip() in df_m["Nome do Funcionário"].values:
-st.error("❌ Já cadastrado!")
-else:
-df_m = pd.concat([df_m, pd.DataFrame([{"Matrícula": str(nova_mat), "Nome do Funcionário": novo_nome.strip(), "Senha": nova_senha.strip()}])], ignore_index=True)
-salvar_github(df_m, ARQUIVO_MATRICULAS, sha_mat, "Novo Funcionario")
-st.success("👥 Cadastrado com sucesso!")
-st.rerun()
-df_m_vis, _ = ler_github(ARQUIVO_MATRICULAS)
-if not df_m_vis.empty:
-st.table(df_m_vis)
-with aba_fotos:
-df_pt_ft, _ = ler_github(ARQUIVO_EXCEL)
-if not df_pt_ft.empty:
-for idx, row in df_pt_ft.iloc[::-1].iterrows():
-try:
-data_original = datetime.strptime(str(row["Data"]).split()[0], "%Y-%m-%d")
-data_formatada = data_original.strftime("%d/%m/%Y")
-except:
-data_formatada = str(row["Data"])
-hora_formatada = str(row["Hora"])[:5]
-st.markdown(f"👤 {row['Nome do Funcionário']} — {row['Tipo de Registro']} em {data_formatada} às {hora_formatada} (Selo de Presença Diária Vinculado)")
-st.write("---")
-with aba_manutencao:
-if st.button("Limpar Batidas de Ponto do Mês"):
-_, sha_ponto = ler_github(ARQUIVO_EXCEL)
-vazio = pd.DataFrame(columns=["Matrícula", "Nome do Funcionário", "Data", "Dia da Semana", "Hora", "Tipo de Registro", "Observação", "Caminho da Foto"])
-salvar_github(vazio, ARQUIVO_EXCEL, sha_ponto, "Limpeza Mensal")
-st.success("📦 Pontos limpos permanentemente!")
-st.rerun()
-
-[final da folha 5 de 5 com 43 linhas]
+                    if novo_nome.strip() in df_m["Nome do Funcionário"].values: 
+                        st.error("❌ Já cadastrado!")
+                    else:
+                        df_m = pd.concat([df_m, pd.DataFrame([{"Matrícula": str(nova_mat), "Nome do Funcionário": novo_nome.strip(), "Senha": nova_senha.strip()}])], ignore_index=True)
+                        salvar_github(df_m, ARQUIVO_MATRICULAS, sha_mat, "Novo Funcionario")
+                        st.success("👥 Cadastrado com sucesso!")
+                        st.rerun()
+            df_m_vis, _ = ler_github(ARQUIVO_MATRICULAS)
+            if not df_m_vis.empty: 
+                st.table(df_m_vis)
+                
+        with aba_fotos:
+            df_pt_ft, _ = ler_github(ARQUIVO_EXCEL)
+            if not df_pt_ft.empty:
+                for idx, row in df_pt_ft.iloc[::-1].iterrows():
+                    try:
+                        data_original = datetime.strptime(str(row["Data"]).split()[0], "%Y-%m-%d")
+                        data_formatada = data_original.strftime("%d/%m/%Y")
+                    except:
+                        data_formatada = str(row["Data"])
+                    hora_formatada = str(row["Hora"])[:5]
+                    st.markdown(f"👤 **{row['Nome do Funcionário']}** — {row['Tipo de Registro']} em **{data_formatada}** às **{hora_formatada}** (Selo de Presença Diária Vinculado)")
+                    st.write("---")
+                    
+        with aba_manutencao:
+            if st.button("Limpar Batidas de Ponto do Mês"):
+                _, sha_ponto = ler_github(ARQUIVO_EXCEL)
+                vazio = pd.DataFrame(columns=["Matrícula", "Nome do Funcionário", "Data", "Dia da Semana", "Hora", "Tipo de Registro", "Observação", "Caminho da Foto"])
+                salvar_github(vazio, ARQUIVO_EXCEL, sha_ponto, "Limpeza Mensal")
+                st.success("📦 Pontos limpos permanentemente!")
+                st.rerun()
+# [final da folha 5 de 5 com 43 linhas]
