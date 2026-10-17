@@ -171,19 +171,28 @@ with st.expander("📊 Painel Administrativo Restrito (Apenas ADM)"):
 
 
 ## 5 =======================================================================================================================================================================
+        
 # [inicio da folha 5 de 5 ## Tabela Limpa de Cadastros, Galeria com Hora e Fechamento]
         with aba_cadastros:
             col1, col2, col3 = st.columns(3)
-            with col1: nova_mat = st.text_input("Nova Matrícula:").strip()
-            with col2: novo_nome = st.text_input("Nome Completo do Funcionário:")
-            with col3: nova_senha = st.text_input("Senha do Funcionário:", type="password")
-            if st.button("Cadastrar Funcionário"):
+            with col1: nova_mat = st.text_input("Nova Matrícula:", key="cad_mat").strip()
+            with col2: novo_nome = st.text_input("Nome Completo do Funcionário:", key="cad_nome").strip()
+            with col3: nova_senha = st.text_input("Senha do Funcionário:", type="password", key="cad_senha").strip()
+            if st.button("Cadastrar Funcionário", key="btn_cad_final"):
                 if nova_mat and novo_nome and nova_senha:
                     df_m, sha_mat = ler_github(ARQUIVO_MATRICULAS)
-                    df_m["Nome do Funcionário"] = df_m["Nome do Funcionário"].astype(str).str.strip()
-                    if novo_nome.strip() in df_m["Nome do Funcionário"].values: st.error("❌ Já cadastrado!")
+                    
+                    # Força a criação das colunas caso o arquivo do Excel venha em branco ou vazio
+                    if df_m.empty or "Nome do Funcionário" not in df_m.columns:
+                        df_m = pd.DataFrame(columns=["Matrícula", "Nome do Funcionário", "Senha"])
                     else:
-                        df_m = pd.concat([df_m, pd.DataFrame([{"Matrícula": str(nova_mat), "Nome do Funcionário": novo_nome.strip(), "Senha": nova_senha.strip()}])], ignore_index=True)
+                        df_m["Nome do Funcionário"] = df_m["Nome do Funcionário"].astype(str).str.strip()
+                    
+                    if novo_nome in df_m["Nome do Funcionário"].values: 
+                        st.error("❌ Já cadastrado!")
+                    else:
+                        novo_func = pd.DataFrame([{"Matrícula": str(nova_mat), "Nome do Funcionário": novo_nome, "Senha": str(nova_senha)}])
+                        df_m = pd.concat([df_m, novo_func], ignore_index=True)
                         salvar_github(df_m, ARQUIVO_MATRICULAS, sha_mat, "Novo Funcionario")
                         st.success("👥 Cadastrado com sucesso!")
                         st.rerun()
@@ -195,7 +204,7 @@ with st.expander("📊 Painel Administrativo Restrito (Apenas ADM)"):
             if not df_pt_ft.empty:
                 for idx, row in df_pt_ft.iloc[::-1].iterrows():
                     try:
-                        data_original = datetime.strptime(str(row["Data"]).split()[0], "%Y-%m-%d")
+                        data_original = datetime.strptime(str(row["Data"]).split(), "%Y-%m-%d")
                         data_formatada = data_original.strftime("%d/%m/%Y")
                     except:
                         data_formatada = str(row["Data"])
@@ -203,13 +212,14 @@ with st.expander("📊 Painel Administrativo Restrito (Apenas ADM)"):
                     st.markdown(f"**{row['Nome do Funcionário']}** - {row['Tipo de Registro']} em **{data_formatada}** às **{hora_formatada}**")
                     st.write("---")
         with aba_manutencao:
-            if st.button("Limpar Batidas de Ponto do Mês"):
+            if st.button("Limpar Batidas de Ponto do Mês", key="btn_limpeza_final"):
                 _, sha_ponto = ler_github(ARQUIVO_EXCEL)
                 vazio = pd.DataFrame(columns=["Matrícula", "Nome do Funcionário", "Data", "Dia da Semana", "Hora", "Tipo de Registro", "Observação", "Caminho da Foto"])
                 salvar_github(vazio, ARQUIVO_EXCEL, sha_ponto, "Limpeza Mensal")
                 st.success("📦 Pontos limpos permanentemente!")
                 st.rerun()
-# [final da folha 5 de 5 com 37 linhas]
+# [final da folha 5 de 5 com 47 linhas]
+
 
 
 ## =========================================================================================================================================================================
