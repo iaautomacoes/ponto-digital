@@ -75,8 +75,9 @@ if login_nome and login_senha:
         
         if not usuario_valido.empty:
             logado = True
-            nome_funcionario = str(usuario_valido.iloc[0]["Nome do Funcionário"])
-            matr_crua = usuario_valido.iloc[0]["Matrícula"]
+            # Correção do indexador: Utilizando .iloc[0] para pegar a primeira linha encontrada
+            nome_funcionario = str(usuario_valido["Nome do Funcionário"].iloc[0])
+            matr_crua = usuario_valido["Matrícula"].iloc[0]
             matricula_funcionario = str(int(float(matr_crua))) if pd.notna(matr_crua) else str(matr_crua)
             st.sidebar.success(f"🔓 Conectado: {nome_funcionario}")
         else:
@@ -90,7 +91,6 @@ if logado:
 else:
     st.warning("👈 Faça login no menu ao lado para liberar o ponto.")
 # [final da folha 2 de 5 com 41 linhas]
-
 
 
 ## 3 ======================================================================================================================================================================
