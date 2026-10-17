@@ -3,8 +3,6 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
-import shutil
-import urllib.parse
 import requests
 import base64
 import io
@@ -13,7 +11,6 @@ st.set_page_config(page_title="Ponto Digital Pro", page_icon="⏰", layout="wide
 REPO = "iaautomacoes/ponto-digital"
 ARQUIVO_EXCEL = "registro_ponto.xlsx"
 ARQUIVO_MATRICULAS = "cadastro_matriculas.xlsx"
-PASTA_FOTOS = "fotos_ponto"
 
 TOKEN = st.secrets.get("GITHUB_TOKEN", "")
 
@@ -31,20 +28,22 @@ def ler_github(caminho):
         pass
     return pd.DataFrame(), None
 
-def salvar_github(df, caminho, sha, msg="Update"):
+def salvar_github(df, camino, sha, msg="Update"):
     output = io.BytesIO()
     df.to_excel(output, index=False)
     conteudo_b64 = base64.b64encode(output.getvalue()).decode()
-    url = f"https://github.com{REPO}/contents/{caminho}"
+    url = f"https://github.com{REPO}/contents/{camino}"
     headers = {"Authorization": f"token {TOKEN}"}
     data = {"message": msg, "content": conteudo_b64}
-    if sha: data["sha"] = sha
+    if sha: 
+        data["sha"] = sha
     try:
         requests.put(url, json=data, headers=headers)
     except:
         pass
-# [final da folha 1 de 5 com 43 linhas]
+# [final da folha 1 de 5 com 44 linhas]
 
+## 2  ============================================================================================================================================================================================
 
 # [inicio da folha 2 de 5 ## Inicialização de Tabelas e Tela de Login]
 DIAS_SEMANA = {0: "Segunda-feira", 1: "Terça-feira", 2: "Quarta-feira", 
@@ -64,18 +63,20 @@ matricula_funcionario = ""
 if login_nome and login_senha:
     df_validos, _ = ler_github(ARQUIVO_MATRICULAS)
     if not df_validos.empty:
-        df_validos["Nome do Funcionário"] = df_validos["Nome do Funcionário"].astype(str).str.strip()
-        df_validos["Senha"] = df_validos["Senha"].astype(str).str.strip()
-        usuario_valido = df_validos[(df_validos["Nome do Funcionário"].str.lower() == login_nome.lower()) & (df_validos["Senha"] == login_senha)]
-        
-        if not usuario_valido.empty:
-            logado = True
-            nome_funcionario = str(usuario_valido.iloc[0]["Nome do Funcionário"])
-            matr_crua = usuario_valido.iloc[0]["Matrícula"]
-            matricula_funcionario = str(int(float(matr_crua))) if pd.notna(matr_crua) else str(matr_crua)
-            st.sidebar.success(f"🔓 Conectado: {nome_funcionario}")
-        else:
-            st.sidebar.error("❌ Nome ou Senha Incorreta.")
+        if "Nome do Funcionário" in df_validos.columns and "Senha" in df_validos.columns:
+            df_validos["Nome do Funcionário"] = df_validos["Nome do Funcionário"].astype(str).str.strip()
+            df_validos["Senha"] = df_validos["Senha"].astype(str).str.strip()
+            
+            usuario_valido = df_validos[(df_validos["Nome do Funcionário"].str.lower() == login_nome.lower()) & (df_validos["Senha"].astype(str) == login_senha)]
+            
+            if not usuario_valido.empty:
+                logado = True
+                nome_funcionario = str(usuario_valido.iloc[0]["Nome do Funcionário"])
+                matr_crua = usuario_valido.iloc[0]["Matrícula"]
+                matricula_funcionario = str(int(float(matr_crua))) if pd.notna(matr_crua) else str(matr_crua)
+                st.sidebar.success(f"🔓 Conectado: {nome_funcionario}")
+            else:
+                st.sidebar.error("❌ Nome ou Senha Incorreta.")
 
 if logado:
     st.info(f"👋 Olá, {nome_funcionario.lower()}! Use o formulário abaixo para registrar seu horário.")
@@ -85,8 +86,10 @@ if logado:
     foto_capturada = st.camera_input("📸 Posicione-se para a foto de validação:")
 else:
     st.warning("👈 Faça login no menu ao lado para liberar o formulário de ponto.")
-# [final da folha 2 de 5 com 42 linhas]
+# [final da folha 2 de 5 com 43 linhas]
 
+
+## 3  ============================================================================================================================================================================================
 
 # [inicio da folha 3 de 5 ## Gravação e Envio de Ponto com Hora Correta]
 if logado and st.button("Confirmar Registro de Ponto", type="primary"):
@@ -104,7 +107,9 @@ if logado and st.button("Confirmar Registro de Ponto", type="primary"):
         df_atual, sha_ponto = ler_github(ARQUIVO_EXCEL)
         pode_registrar = True
         
-        if not df_atual.empty:
+        if df_atual.empty:
+            df_atual = pd.DataFrame(columns=["Matrícula", "Nome do Funcionário", "Data", "Dia da Semana", "Hora", "Tipo de Registro", "Observação", "Caminho da Foto"])
+        else:
             registros_hoje = df_atual[(df_atual["Matrícula"].astype(str) == matricula_funcionario) & (df_atual["Data"] == data_hoje)]
             if tipo_registro in ["Saída Almoço", "Saída"]:
                 if registros_hoje[registros_hoje["Tipo de Registro"].isin(["Entrada", "Retorno Almoço"])].empty:
@@ -128,28 +133,29 @@ if logado and st.button("Confirmar Registro de Ponto", type="primary"):
             st.markdown(f"[📲 Abrir Notificação no WhatsApp]({link_whatsapp})")
             st.balloons()
             st.rerun()
-# [final da folha 3 de 5 com 41 linhas]
+# [final da folha 3 de 5 com 43 linhas]
 
 
+## 4  ============================================================================================================================================================================================
 
-        # [inicio da folha 4 de 5 ## Painel ADM, Escala e Relatórios por Dia]
+# [inicio da folha 4 de 5 ## Painel ADM, Escala e Relatórios por Dia]
 st.write("---")
-# O bloco foi movido para a raiz do código para aparecer sempre no rodapé
 with st.expander("📊 Painel Administrativo Restrito (Apenas ADM)"):
-    senha_adm = st.text_input("Digite a senha master:", type="password", key="adm_senha_key")
+    senha_adm = st.text_input("Digite a senha master:", type="password", key="adm_senha_final")
     if senha_adm == "admin123":
         aba_relatorios, aba_cadastros, aba_fotos, aba_manutencao = st.tabs([
             "📊 Relatórios e Filtros", "👥 Cadastrar Funcionários", "📸 Galeria Visual", "⚙️ Manutenção do Sistema"
         ])
+        
         with aba_relatorios:
             df_visualizar, _ = ler_github(ARQUIVO_EXCEL)
             if not df_visualizar.empty:
                 lista_funcionarios = ["Todos"] + list(df_visualizar["Nome do Funcionário"].unique())
-                filtro_nome = st.selectbox("Filtrar por Funcionário:", lista_funcionarios)
+                filtro_nome = st.selectbox("Filtrar por Funcionário:", lista_funcionarios, key="f_nome")
                 
                 df_visualizar["Data_Clean"] = df_visualizar["Data"].astype(str).str.strip()
                 lista_datas = ["Todas"] + sorted(list(df_visualizar["Data_Clean"].unique()), reverse=True)
-                filtro_data = st.selectbox("Filtrar por Data:", lista_datas)
+                filtro_data = st.selectbox("Filtrar por Data:", lista_datas, key="f_data")
                 
                 relatorio_dias = []
                 for (mat, nome, data), grupo in df_visualizar.groupby(["Matrícula", "Nome do Funcionário", "Data_Clean"]):
@@ -190,16 +196,20 @@ with st.expander("📊 Painel Administrativo Restrito (Apenas ADM)"):
                     total_dias_periodo = df_calculado["Dias_Num"].sum()
                     st.metric("📆 Total de Dias Trabalhados no Período", f"{total_dias_periodo:.1f} Dias")
                     st.table(df_calculado.drop(columns=["Data_Raw", "Dias_Num"]))
-# [final da folha 4 de 5 com 47 linhas]
+            else:
+                st.info("Nenhum ponto registrado no banco de dados.")
+# [final da folha 4 de 5 com 53 linhas]
 
+
+## 5  ============================================================================================================================================================================================
 
 # [inicio da folha 5 de 5 ## Tabela Limpa de Cadastros, Galeria com Hora e Fechamento]
         with aba_cadastros:
             col1, col2, col3 = st.columns(3)
-            with col1: nova_mat = st.text_input("Nova Matrícula:").strip()
-            with col2: novo_nome = st.text_input("Nome Completo do Funcionário:")
-            with col3: nova_senha = st.text_input("Senha do Funcionário:", type="password")
-            if st.button("Cadastrar Funcionário"):
+            with col1: nova_mat = st.text_input("Nova Matrícula:", key="c_mat").strip()
+            with col2: novo_nome = st.text_input("Nome Completo do Funcionário:", key="c_nome").strip()
+            with col3: nova_senha = st.text_input("Senha do Funcionário:", type="password", key="c_senha").strip()
+            if st.button("Cadastrar Funcionário", type="secondary", key="btn_cad"):
                 if nova_mat and novo_nome and nova_senha:
                     df_m, sha_mat = ler_github(ARQUIVO_MATRICULAS)
                     if df_m.empty:
@@ -207,37 +217,41 @@ with st.expander("📊 Painel Administrativo Restrito (Apenas ADM)"):
                     else:
                         df_m["Nome do Funcionário"] = df_m["Nome do Funcionário"].astype(str).str.strip()
                         
-                    if novo_nome.strip() in df_m["Nome do Funcionário"].values: 
+                    if novo_nome in df_m["Nome do Funcionário"].values: 
                         st.error("❌ Já cadastrado!")
                     else:
-                        df_m = pd.concat([df_m, pd.DataFrame([{"Matrícula": str(nova_mat), "Nome do Funcionário": novo_nome.strip(), "Senha": nova_senha.strip()}])], ignore_index=True)
+                        novo_func = pd.DataFrame([{"Matrícula": str(nova_mat), "Nome do Funcionário": novo_nome, "Senha": str(nova_senha)}])
+                        df_m = pd.concat([df_m, novo_func], ignore_index=True)
                         salvar_github(df_m, ARQUIVO_MATRICULAS, sha_mat, "Novo Funcionario")
                         st.success("👥 Cadastrado com sucesso!")
                         st.rerun()
+                else:
+                    st.warning("⚠️ Preencha todos os campos para cadastrar.")
+                    
             df_m_vis, _ = ler_github(ARQUIVO_MATRICULAS)
             if not df_m_vis.empty: 
                 st.table(df_m_vis)
-                
+
         with aba_fotos:
             df_pt_ft, _ = ler_github(ARQUIVO_EXCEL)
             if not df_pt_ft.empty:
                 for idx, row in df_pt_ft.iloc[::-1].iterrows():
                     try:
-                        data_original = datetime.strptime(str(row["Data"]).split()[0], "%Y-%m-%d")
+                        data_original = datetime.strptime(str(row["Data"]).split(), "%Y-%m-%d")
                         data_formatada = data_original.strftime("%d/%m/%Y")
                     except:
                         data_formatada = str(row["Data"])
                     hora_formatada = str(row["Hora"])[:5]
-                    st.markdown(f"👤 **{row['Nome do Funcionário']}** — {row['Tipo de Registro']} em **{data_formatada}** às **{hora_formatada}** (Selo de Presença Diária Vinculado)")
+                    st.markdown(f"👤 **{row['Nome do Funcionário']}** — {row['Tipo de Registro']} em **{data_formatada}** às **{hora_formatada}**")
                     st.write("---")
-                    
+
         with aba_manutencao:
-            if st.button("Limpar Batidas de Ponto do Mês"):
+            if st.button("Limpar Batidas de Ponto do Mês", key="btn_clear_all"):
                 _, sha_ponto = ler_github(ARQUIVO_EXCEL)
                 vazio = pd.DataFrame(columns=["Matrícula", "Nome do Funcionário", "Data", "Dia da Semana", "Hora", "Tipo de Registro", "Observação", "Caminho da Foto"])
                 salvar_github(vazio, ARQUIVO_EXCEL, sha_ponto, "Limpeza Mensal")
                 st.success("📦 Pontos limpos permanentemente!")
                 st.rerun()
-# [final da folha 5 de 5 com 43 linhas]
+# [final da folha 5 de 5 com 44 linhas]
 
-
+## fim  ============================================================================================================================================================================================
