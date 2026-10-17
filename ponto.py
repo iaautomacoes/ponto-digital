@@ -57,8 +57,8 @@ st.title("⏰ Sistema de Ponto Digital Pro")
 st.subheader("Acesso Restrito por Nome e Senha Individual")
 
 st.sidebar.write("### 🔑 Área de Acesso do Colaborador")
-login_nome = st.sidebar.text_input("Digite seu Nome Completo:").strip()
-login_senha = st.sidebar.text_input("Digite sua Senha Pessoal:", type="password").strip()
+login_nome = st.sidebar.text_input("Digite seu Nome Completo:", key="login_nome_final").strip()
+login_senha = st.sidebar.text_input("Digite sua Senha Pessoal:", type="password", key="login_senha_final").strip()
 
 logado = False
 nome_funcionario = ""
@@ -66,33 +66,37 @@ matricula_funcionario = ""
 
 if login_nome and login_senha:
     df_validos, _ = ler_github(ARQUIVO_MATRICULAS)
-    if not df_validos.empty:
+    if not df_validos.empty and "Nome do Funcionário" in df_validos.columns:
         df_validos["Nome do Funcionário"] = df_validos["Nome do Funcionário"].astype(str).str.strip()
-        df_validos["Senha"] = df_validos["Senha"].astype(str).str.strip()
+        if "Senha" in df_validos.columns:
+            df_validos["Senha"] = df_validos["Senha"].astype(str).str.strip()
+        
         usuario_valido = df_validos[(df_validos["Nome do Funcionário"].str.lower() == login_nome.lower()) & (df_validos["Senha"] == login_senha)]
         
         if not usuario_valido.empty:
             logado = True
             nome_funcionario = str(usuario_valido.iloc[0]["Nome do Funcionário"])
-            matricula_funcionario = str(usuario_valido.iloc[0]["Matrícula"])
+            matr_crua = usuario_valido.iloc[0]["Matrícula"]
+            matricula_funcionario = str(int(float(matr_crua))) if pd.notna(matr_crua) else str(matr_crua)
             st.sidebar.success(f"🔓 Conectado: {nome_funcionario}")
         else:
             st.sidebar.error("❌ Nome ou Senha Incorreta.")
 
 if logado:
     st.info(f"👋 Olá, **{nome_funcionario}**! Registre seu horário.")
-    tipo_registro = st.selectbox("Selecione o tipo:", ["Entrada", "Saída Almoço", "Retorno Almoço", "Saída"])
-    observacao = st.text_area("Observação (Opcional):", max_chars=200)
-    foto_capturada = st.camera_input("Tirar foto para o ponto")
+    tipo_registro = st.selectbox("Selecione o tipo:", ["Entrada", "Saída Almoço", "Retorno Almoço", "Saída"], key="tipo_ponto_colab")
+    observacao = st.text_area("Observação (Opcional):", max_chars=200, key="obs_ponto_colab")
+    foto_capturada = st.camera_input("Tirar foto para o ponto", key="camera_ponto_colab")
 else:
     st.warning("👈 Faça login no menu ao lado para liberar o ponto.")
-# [final da folha 2 of 5 com 36 linhas]
+# [final da folha 2 de 5 com 41 linhas]
+
 
 
 ## 3 ======================================================================================================================================================================
 
-## fim  ============================================================================================================================================================================================# [inicio da folha 3 de 5 ## Gravação e Envio de Ponto com Hora Correta]
-if logado and st.button("Confirmar Registro de Ponto", type="primary"):
+# [inicio da folha 3 de 5 ## Gravação e Envio de Ponto com Hora Correta]
+if logado and st.button("Confirmar Registro de Ponto", type="primary", key="btn_confirmar_ponto_final"):
     if foto_capturada is None:
         st.error("❌ É obrigatório tirar a foto para validar o ponto.")
     else:
@@ -107,7 +111,9 @@ if logado and st.button("Confirmar Registro de Ponto", type="primary"):
         df_atual, sha_ponto = ler_github(ARQUIVO_EXCEL)
         pode_registrar = True
         
-        if not df_atual.empty:
+        if df_atual.empty:
+            df_atual = pd.DataFrame(columns=["Matrícula", "Nome do Funcionário", "Data", "Dia da Semana", "Hora", "Tipo de Registro", "Observação", "Caminho da Foto"])
+        else:
             registros_hoje = df_atual[(df_atual["Matrícula"].astype(str) == matricula_funcionario) & (df_atual["Data"] == data_hoje)]
             if tipo_registro in ["Saída Almoço", "Saída"]:
                 if registros_hoje[registros_hoje["Tipo de Registro"].isin(["Entrada", "Retorno Almoço"])].empty:
@@ -131,47 +137,64 @@ if logado and st.button("Confirmar Registro de Ponto", type="primary"):
             st.markdown(f"[📲 Abrir Notificação no WhatsApp]({link_whatsapp})")
             st.balloons()
             st.rerun()
-# [final da folha 3 de 5 com 41 linhas]
+# [final da folha 3 de 5 com 44 linhas]
+
 
 
 ## 4 =======================================================================================================================================================================
+
 # [inicio da folha 4 de 5 ## Painel ADM, Escala e Relatórios]
 st.write("---")
 with st.expander("📊 Painel Administrativo Restrito (Apenas ADM)"):
-    senha_adm = st.text_input("Digite a senha master:", type="password")
+    senha_adm = st.text_input("Digite a senha master:", type="password", key="senha_adm_master")
     if senha_adm == "admin123":
         aba_relatorios, aba_cadastros, aba_fotos, aba_manutencao = st.tabs([
             "📊 Relatórios e Filtros", "👥 Cadastrar Funcionários", "📸 Galeria Visual", "⚙️ Manutenção do Sistema"
         ])
         with aba_relatorios:
-            jornada_editavel = st.slider("Jornada padrão diária (Horas):", min_value=1.0, max_value=12.0, value=8.0, step=0.5)
             df_visualizar, _ = ler_github(ARQUIVO_EXCEL)
             if not df_visualizar.empty:
                 lista_funcionarios = ["Todos"] + list(df_visualizar["Nome do Funcionário"].unique())
-                filtro_nome = st.selectbox("Filtrar por Funcionário:", lista_funcionarios)
-                relatorio_horas = []
-                for (mat, nome, data), grupo in df_visualizar.groupby(["Matrícula", "Nome do Funcionário", "Data"]):
-                    grupo = grupo.sort_values(by="Hora")
-                    total_segundos, hora_entrada = 0, None
-                    for _, row in grupo.iterrows():
-                        if row["Tipo de Registro"] in ["Entrada", "Retorno Almoço"]: hora_entrada = datetime.strptime(f"{data} {row['Hora']}", "%Y-%m-%d %H:%M:%S")
-                        elif row["Tipo de Registro"] in ["Saída Almoço", "Saída"] and hora_entrada is not None:
-                            total_segundos += (datetime.strptime(f"{data} {row['Hora']}", "%Y-%m-%d %H:%M:%S") - hora_entrada).total_seconds()
-                            hora_entrada = None
-                    horas_totais = total_segundos / 3600
-                    saldo = horas_totais - jornada_editavel
-                    status_saldo = f"+{saldo:.2f} hrs (Extra)" if saldo > 0 else (f"{saldo:.2f} hrs (Devendo)" if saldo < 0 else "0.00 hrs")
-                    data_dt = datetime.strptime(str(data).split()[0], "%Y-%m-%d")
-                    data_br = data_dt.strftime("%d/%m/%Y")
-                    relatorio_horas.append({"Matrícula": mat, "Funcionário": nome, "Data": data_br, "Horas Trabalhadas": f"{horas_totais:.2f} hrs", "Saldo do Dia": status_saldo})
-                df_calculado = pd.DataFrame(relatorio_horas)
-                if filtro_nome != "Todos": df_calculado = df_calculado[df_calculado["Funcionário"] == filtro_nome]
+                filtro_nome = st.selectbox("Filtrar por Funcionário:", lista_funcionarios, key="filtro_nome_adm")
+                
+                df_visualizar["Data_Clean"] = df_visualizar["Data"].astype(str).str.strip()
+                relatorio_dias = []
+                
+                for (mat, nome, data), grupo in df_visualizar.groupby(["Matrícula", "Nome do Funcionário", "Data_Clean"]):
+                    total_batidas = len(grupo)
+                    tem_entrada = not grupo[grupo["Tipo de Registro"] == "Entrada"].empty
+                    tem_saida = not grupo[grupo["Tipo de Registro"] == "Saída"].empty
+                    
+                    if tem_entrada and tem_saida:
+                        status_dia = "Presença Confirmada"
+                        qtd_dias = 1.0
+                    elif total_batidas > 0:
+                        status_dia = "Ponto Incompleto"
+                        qtd_dias = 0.5
+                    else:
+                        status_dia = "Sem Registro"
+                        qtd_dias = 0.0
+                        
+                    try:
+                        data_dt = datetime.strptime(data.split()[0], "%Y-%m-%d")
+                        data_br = data_dt.strftime("%d/%m/%Y")
+                    except:
+                        data_br = data
+                        
+                    relatorio_dias.append({
+                        "Matrícula": mat, "Funcionário": nome, "Data": data_br, 
+                        "Dias Trabalhados": f"{qtd_dias:.1f} Dia", "Status do Dia": status_dia
+                    })
+                    
+                df_calculado = pd.DataFrame(relatorio_dias)
+                if filtro_nome != "Todos": 
+                    df_calculado = df_calculado[df_calculado["Funcionário"] == filtro_nome]
                 st.table(df_calculado)
-# [final da folha 4 de 5 com 31 linhas]
+# [final da folha 4 de 5 com 39 linhas]
 
 
 ## 5 =======================================================================================================================================================================
-        
+
 # [inicio da folha 5 de 5 ## Tabela Limpa de Cadastros, Galeria com Hora e Fechamento]
         with aba_cadastros:
             col1, col2, col3 = st.columns(3)
@@ -182,7 +205,6 @@ with st.expander("📊 Painel Administrativo Restrito (Apenas ADM)"):
                 if nova_mat and novo_nome and nova_senha:
                     df_m, sha_mat = ler_github(ARQUIVO_MATRICULAS)
                     
-                    # Força a criação das colunas caso o arquivo do Excel venha em branco ou vazio
                     if df_m.empty or "Nome do Funcionário" not in df_m.columns:
                         df_m = pd.DataFrame(columns=["Matrícula", "Nome do Funcionário", "Senha"])
                     else:
@@ -204,7 +226,7 @@ with st.expander("📊 Painel Administrativo Restrito (Apenas ADM)"):
             if not df_pt_ft.empty:
                 for idx, row in df_pt_ft.iloc[::-1].iterrows():
                     try:
-                        data_original = datetime.strptime(str(row["Data"]).split(), "%Y-%m-%d")
+                        data_original = datetime.strptime(str(row["Data"]).split()[0], "%Y-%m-%d")
                         data_formatada = data_original.strftime("%d/%m/%Y")
                     except:
                         data_formatada = str(row["Data"])
@@ -219,7 +241,6 @@ with st.expander("📊 Painel Administrativo Restrito (Apenas ADM)"):
                 st.success("📦 Pontos limpos permanentemente!")
                 st.rerun()
 # [final da folha 5 de 5 com 47 linhas]
-
 
 
 ## =========================================================================================================================================================================
