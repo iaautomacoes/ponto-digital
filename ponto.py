@@ -7,6 +7,7 @@ import shutil
 import urllib.parse
 import requests
 import base64
+import io
 
 st.set_page_config(page_title="Ponto Digital Pro", page_icon="⏰", layout="wide")
 REPO = "iaautomacoes/ponto-digital"
@@ -19,15 +20,18 @@ TOKEN = st.secrets.get("GITHUB_TOKEN", "")
 def ler_github(caminho):
     url = f"https://github.com{REPO}/contents/{caminho}"
     headers = {"Authorization": f"token {TOKEN}"} if TOKEN else {}
-    r = requests.get(url, headers=headers)
-    if r.status_code == 200:
-        conteudo = r.json()
-        df = pd.read_excel(base64.b64decode(conteudo["content"]))
-        return df, conteudo["sha"]
+    try:
+        r = requests.get(url, headers=headers)
+        if r.status_code == 200:
+            conteudo = r.json()
+            dados_finais = base64.b64decode(conteudo["content"])
+            df = pd.read_excel(io.BytesIO(dados_finais))
+            return df, conteudo["sha"]
+    except:
+        pass
     return pd.DataFrame(), None
 
 def salvar_github(df, caminho, sha, msg="Update"):
-    import io
     output = io.BytesIO()
     df.to_excel(output, index=False)
     conteudo_b64 = base64.b64encode(output.getvalue()).decode()
@@ -35,8 +39,12 @@ def salvar_github(df, caminho, sha, msg="Update"):
     headers = {"Authorization": f"token {TOKEN}"}
     data = {"message": msg, "content": conteudo_b64}
     if sha: data["sha"] = sha
-    requests.put(url, json=data, headers=headers)
-# [final da folha 1 de 5 com 36 linhas]
+    try:
+        requests.put(url, json=data, headers=headers)
+    except:
+        pass
+# [final da folha 1 de 5 com 44 linhas]
+
 
 
 ## 2 =======================================================================================================================================================================
