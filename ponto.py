@@ -23,6 +23,7 @@ DIAS_SEMANA = {
 
 def ler_github(caminho):
     url = f"https://github.com{REPO}/contents/{caminho}"
+
     headers = {"Authorization": f"token {TOKEN}"} if TOKEN else {}
     try:
         r = requests.get(url, headers=headers)
