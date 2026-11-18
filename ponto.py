@@ -36,7 +36,7 @@ def ler_github(caminho):
 
 def salvar_github(df, caminho, sha, msg="Atualização automática"):
     if not TOKEN:
-        st.error("❌ Token do GitHub não configurado no secrets.toml.")
+        st.error("❌ Token do GitHub não configurado nos Secrets.")
         return False
     output = io.BytesIO()
     df.to_excel(output, index=False)
@@ -51,10 +51,9 @@ def salvar_github(df, caminho, sha, msg="Atualização automática"):
         return True
     st.error(f"❌ Falha no GitHub ({r.status_code}): {r.json().get('message', '')}")
     return False
-# [final da folha 1 de 5 com 53 linhas]
+# [final da folha 1 de 5]
 
-
-#=================================================================================================================================================
+#=======================================================================================================================================================
 
 # [inicio da folha 2 de 5 ## Tela de Login e Campos de Ponto]
 st.title("⏰ Sistema de Ponto Digital Pro")
@@ -98,10 +97,9 @@ if logado:
     foto_capturada = st.camera_input("Tirar foto para o ponto", key="camera_ponto")
 else:
     st.warning("👈 Faça login no menu ao lado para liberar o registro de ponto.")
-# [final da folha 2 de 5 com 42 linhas]
+# [final da folha 2 de 5]
 
-
-#=================================================================================================================================================
+#=======================================================================================================================================================
 
 # [inicio da folha 3 de 5 ## Gravação e Envio de Ponto com Hora Correta]
 if logado and st.button("Confirmar Registro de Ponto", type="primary", key="btn_confirmar"):
@@ -140,10 +138,9 @@ if logado and st.button("Confirmar Registro de Ponto", type="primary", key="btn_
                 st.success(f"✅ Ponto registrado com sucesso às {hora_agora[:5]}!")
                 st.markdown(f"[📲 Enviar Comprovante no WhatsApp]({link_whatsapp})")
                 st.balloons()
-# [final da folha 3 de 5 com 37 linhas]
+# [final da folha 3 de 5]
 
-
-#=================================================================================================================================================
+#=======================================================================================================================================================
 
 # [inicio da folha 4 de 5 ## Painel ADM, Escala e Relatórios]
 st.write("---")
@@ -184,10 +181,9 @@ with st.expander("📊 Painel Administrativo Restrito (Apenas ADM)"):
                 st.dataframe(df_calculado, use_container_width=True)
             else:
                 st.info("Nenhum registro de ponto encontrado ainda.")
-# [final da folha 4 de 5 com 39 linhas]
+# [final da folha 4 de 5]
 
-
-#=================================================================================================================================================
+#=======================================================================================================================================================
 
 # [inicio da folha 5 de 5 ## Cadastros, Histórico e Manutenção]
         with aba_cadastros:
@@ -237,6 +233,6 @@ with st.expander("📊 Painel Administrativo Restrito (Apenas ADM)"):
                 if salvar_github(vazio, ARQUIVO_PONTO, sha_ponto, "Limpeza Mensal"):
                     st.success("📦 Pontos limpos com sucesso!")
                     st.rerun()
-# [final da folha 5 de 5 com 48 linhas]
+# [final da folha 5 de 5]
 
-#=================================================================================================================================================
+#=======================================================================================================================================================
